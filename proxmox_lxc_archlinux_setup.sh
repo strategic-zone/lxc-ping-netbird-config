@@ -1,4 +1,3 @@
-```bash
 #!/usr/bin/env sh
 : <<HEADER
 title       : proxmox_lxc_archlinux_setup.sh
@@ -178,4 +177,3 @@ echo -e "${GREEN}Container IP: $IP${NC}"
 echo -e "${GREEN}SSH Port: $SSH_PORT${NC}"
 [ -n "$VLAN_ID" ] && echo -e "${GREEN}VLAN ID: $VLAN_ID${NC}"
 echo -e "${GREEN}Flux is watching: $REPO_URL${NC}"
-```
