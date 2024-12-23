@@ -1,0 +1,17 @@
+---
+services:
+  netbird:
+    image: netbirdio/netbird:latest
+    container_name: ${CONTAINER_NAME}
+    hostname: ${CONTAINER_NAME}
+    network_mode: host
+    restart: always
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      TZ: Europe/Paris
+      NB_SETUP_KEY: ${NETBIRD_SETUP_KEY}
+    volumes:
+      - ./netbird-client:/etc/netbird
