@@ -30,15 +30,14 @@ HEADER
 # Variables with defaults and env override
 CONTAINER_NAME=${CONTAINER_NAME:-"ping-xxx"}
 VLAN_ID=${VLAN_ID:-""}  # Empty by default
-STORAGE="local"
-RAM=2048
-SWAP=512
-DISK=10
-CORES=2
+STORAGE=${STORAGE:-"local"}
+RAM=${RAM:-2048}
+SWAP=${ SWAP:-1024}
+DISK=${DISK:-10}
+CORES=${CORES:-2}
 TEMPLATE_PATH="/var/lib/vz/template/cache"
-SSH_PORT=34522
-UNPRIVILEGED=0
-REPO_URL="https://github.com/strategic-zone/lxc-ping-netbird-config.git"
+SSH_PORT=${SSH_PORT:-34522}
+UNPRIVILEGED=${UNPRIVILEGED:-0}
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -120,7 +119,7 @@ pct exec $CONTAINER_ID -- bash -c '
 # Install required packages including Flux
 echo -e "${GREEN}Installing required packages...${NC}"
 pct exec $CONTAINER_ID -- bash -c '
-    pacman -S --noconfirm openssh python docker docker-compose zsh neovim net-tools git fluxcd
+    pacman -S --noconfirm openssh python docker docker-compose zsh neovim net-tools git
 '
 
 # Configure SSH port
@@ -144,27 +143,37 @@ pct exec $CONTAINER_ID -- bash -c '
 echo -e "${GREEN}Enabling Docker...${NC}"
 pct exec $CONTAINER_ID -- systemctl enable --now docker
 
-# Configure git and flux
-echo -e "${GREEN}Configuring Flux...${NC}"
+# Setup Netbird compose
+echo -e "${GREEN}Setting up Netbird...${NC}"
 pct exec $CONTAINER_ID -- bash -c "
-    flux bootstrap github \
-        --repository=${REPO_URL} \
-        --branch=main \
-        --path=compose \
-        --private=false
-
-    flux create source git netbird \
-        --url=${REPO_URL} \
-        --branch=main \
-        --interval=1m
+    mkdir -p /srv/dockers/services/netbird
+    cat > /srv/dockers/services/netbird/compose.yml << EOF
+---
+services:
+  netbird:
+    image: netbirdio/netbird:latest
+    container_name: ${CONTAINER_NAME}
+    hostname: ${CONTAINER_NAME}
+    network_mode: host
+    restart: always
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      TZ: Europe/Paris
+      NB_SETUP_KEY: ${NETBIRD_SETUP_KEY}
+    volumes:
+      - ./netbird-client:/etc/netbird
+EOF
 "
 
-    flux create kustomization netbird \
-        --source=GitRepository/netbird \
-        --path=./compose \
-        --prune=true \
-        --interval=1m \
-        --export > /tmp/netbird-kustomization.yaml
+# Start Netbird
+echo -e "${GREEN}Starting Netbird...${NC}"
+pct exec $CONTAINER_ID -- bash -c "
+    cd /srv/dockers/services/netbird
+    docker compose pull
+    docker compose up -d
 "
 
 # Get container IP
